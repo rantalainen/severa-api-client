@@ -1,0 +1,38 @@
+{
+  "name": "@rantalainen/severa-api-client",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsc --watch",
+    "test": "nodemon test.js",
+    "build": "tsc",
+    "openapi": "npx swagger-typescript-api -p https://api.severa.visma.com/psapublicrest/openapidocs/v1.0/doc.json -o ./src -n api.ts -r --axios"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rantalainen/severa-api-client.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "files": [
+    "dist/**/*"
+  ],
+  "bugs": {
+    "url": "https://github.com/rantalainen/severa-api-client/issues"
+  },
+  "homepage": "https://github.com/rantalainen/severa-api-client#readme",
+  "dependencies": {
+    "agentkeepalive": "^4.5.0",
+    "axios": "^1.7.7",
+    "cacheable-lookup": "^6.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^18.x",
+    "swagger-typescript-api": "^13.0.23",
+    "typescript": "4.9.5"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
