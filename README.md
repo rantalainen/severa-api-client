@@ -1,4 +1,4 @@
-# example-api-client
+# severa-api-client
 
 **SeveraApiClient** is a third party [Severa API](https://api.severa.visma.com/psapublicrest/doc/index.html#/) client for NodeJS. It is a wrapper around an API client that has been [automatically generated](https://www.npmjs.com/package/swagger-typescript-api) using the [OpenAPI schema](https://example.com/openapi.json) provided by Severa.
 
