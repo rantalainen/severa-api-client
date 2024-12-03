@@ -1,7 +1,7 @@
 import { Api, ApiConfig } from './api';
 import { AxiosRequestConfig } from 'axios';
 import { HttpsAgent } from 'agentkeepalive';
-import { IExampleApiClientConfig, IExampleApiClientOptions } from './interfaces';
+import { SeveraApiClientConfig, SeveraApiClientOptions } from './interfaces';
 import { FileBuffer } from './file-buffer';
 import https from 'https';
 import CacheableLookup from 'cacheable-lookup';
@@ -21,19 +21,19 @@ const httpsAgent = new HttpsAgent({
   socketActiveTTL: 60000
 });
 
-export class ExampleApiClient {
-  options: IExampleApiClientOptions;
-  config: Omit<IExampleApiClientConfig, 'keepAliveAgent' | 'dnsCache'>;
-  readonly api: ExampleApiClientInstance;
+export class SeveraApiClient {
+  options: SeveraApiClientOptions;
+  config: Omit<SeveraApiClientConfig, 'keepAliveAgent' | 'dnsCache'>;
+  readonly api: SeveraApiClientInstance;
+  private accessToken: string | undefined = undefined;
 
-  constructor(options: IExampleApiClientOptions, config: IExampleApiClientConfig = {}) {
+  constructor(options: SeveraApiClientOptions, config: SeveraApiClientConfig = {}) {
     // Set default config
-    config.baseURL = config.baseURL || 'https://example.com';
+    config.baseURL = config.baseURL || 'https://api.severa.visma.com/rest-api';
     config.timeout = config.timeout || 120000;
 
-    if (!options.apiKey) {
-      throw new Error('Example error: Missing options.apiKey');
-    }
+    if (!options.clientId) throw new Error('Example error: Missing options.clientId');
+    if (!options.clientSecret) throw new Error('Example error: Missing options.clientSecret');
 
     // If axios config httpsAgent is not set
     if (!config.httpsAgent) {
@@ -65,11 +65,11 @@ export class ExampleApiClient {
     this.config = config;
 
     // Initialize Example Api Client Instance
-    this.api = new ExampleApiClientInstance({
+    this.api = new SeveraApiClientInstance({
       ...this.config,
       securityWorker: this.config.securityWorker || this.securityWorker
     });
-    this.api.setSecurityData(options.apiKey);
+    this.api.setSecurityData(this);
 
     // Install axios error handler
     this.installErrorHandler();
@@ -79,25 +79,41 @@ export class ExampleApiClient {
     this.api.instance.interceptors.response.use(
       (response) => response,
       (error) => {
-        error.message =
-          `Example HTTP error ${error.response.status} (${error.response.statusText}): ` + JSON.stringify(error.response.data);
+        error.message = `HTTP error ${error.response.status} (${error.response.statusText}): ` + JSON.stringify(error.response.data);
         throw error;
       }
     );
   }
 
-  private async securityWorker(apiKey: string) {
+  public async refreshAccessToken() {
+    // Get a new access token if it's not currently set
+    if (!this.accessToken) {
+      const accessTokenResponse = await this.api.v1.publicBearerAuthenticationGetLoginToken({
+        client_id: this.options.clientId,
+        client_secret: this.options.clientSecret,
+        scope: this.options.scope?.join(',') || undefined
+      });
+
+      if (!accessTokenResponse.data.access_token) throw new Error('Access token is missing from the response');
+      if (!accessTokenResponse.data.access_token_expires_in) throw new Error('Access token expiration time is missing from the response');
+
+      this.accessToken = accessTokenResponse.data.access_token;
+    }
+  }
+
+  private async securityWorker(severa: SeveraApiClient) {
     const axiosRequestConfig: AxiosRequestConfig = {};
 
     axiosRequestConfig.headers = {
-      Authorization: `Bearer ${apiKey}`
+      Authorization: severa.accessToken ? `Bearer ${severa.accessToken}` : undefined,
+      client_id: severa.options.clientId
     };
 
     return axiosRequestConfig;
   }
 }
 
-class ExampleApiClientInstance extends Api<any> {
+class SeveraApiClientInstance extends Api<any> {
   constructor(config?: ApiConfig<any>) {
     super(config);
   }

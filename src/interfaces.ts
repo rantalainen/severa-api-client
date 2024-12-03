@@ -2,12 +2,16 @@ import { ApiConfig } from './api';
 import CacheableLookup from 'cacheable-lookup';
 import https from 'https';
 
-export interface IExampleApiClientOptions {
-  /** An API key is a token that you provide when making API calls */
-  apiKey: string;
+export interface SeveraApiClientOptions {
+  /** A client ID of the API credentials used for connection */
+  clientId: string;
+  /** A client secret of the API credentials used for connection */
+  clientSecret: string;
+  /** A scope for the API access */
+  scope?: string[];
 }
 
-export interface IExampleApiClientConfig extends ApiConfig<any> {
+export interface SeveraApiClientConfig extends ApiConfig<any> {
   /**
    * API base url,
    * by default: `https://example.com`.

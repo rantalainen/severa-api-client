@@ -29,7 +29,7 @@
   },
   "devDependencies": {
     "@types/node": "^18.x",
-    "swagger-typescript-api": "^13.0.23",
+    "swagger-typescript-api": "^12.0.4",
     "typescript": "4.9.5"
   },
   "publishConfig": {
