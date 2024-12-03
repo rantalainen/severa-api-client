@@ -1,39 +1,36 @@
 # example-api-client
 
-**ExampleApiClient** is a third party [Example API](https://example.com/docs/) client for NodeJS. It is a wrapper around an API client that has been [automatically generated](https://www.npmjs.com/package/swagger-typescript-api) using the [OpenAPI schema](https://example.com/openapi.json) provided by Example.
+**SeveraApiClient** is a third party [Severa API](https://api.severa.visma.com/psapublicrest/doc/index.html#/) client for NodeJS. It is a wrapper around an API client that has been [automatically generated](https://www.npmjs.com/package/swagger-typescript-api) using the [OpenAPI schema](https://example.com/openapi.json) provided by Severa.
 
 ## Installation
 
 Add to project's package.json:
 
 ```
-npm install @rantalainen/example-api-client
+npm install @rantalainen/severa-api-client
 ```
 
 ### Import
 
 ```javascript
-import { ExampleApiClient } from '@rantalainen/example-api-client';
+const SeveraApiClient = require('@rantalainen/example-api-client').SeveraApiClient;
 ```
 
 ## Setup client with options
 
-In order to obtain an API key, please contact Example Support. An API key is needed to access all API functions.
+Severa REST API credentials can be obtained from Severa. More information [here](https://support.severa.com/en/support/solutions/articles/77000546834-how-to-get-started-with-rest-api)
 
 ```javascript
-const example = new ExampleApiClient(
+const severa = new SeveraApiClient(
   {
-    apiKey: 'api_key'
-  },
-  {
-    baseURL: 'https://dev.example.com'
+    clientId: 'YOUR_CLIENT_ID',
+    clientSecret: 'YOUR_CLIENT_SECRET',
+    scope: ['users:read', 'activities:read']
   }
 );
+
+// Access token needs to be manually fetched/refreshed before making any scoped requests.
+await severa.refreshAccessToken();
 ```
 
-Available methods can be found in the [API documentation](https://example.com/docs/).
-
-## Resources
-
-- Example: https://example.com/
-- Example Developer Guide: https://example.com/docs/
+Available methods can be found in the [API documentation](https://api.severa.visma.com/psapublicrest/doc/index.html#/).
