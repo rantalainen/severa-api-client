@@ -1,6 +1,6 @@
 import { ApiConfig } from './api';
 import CacheableLookup from 'cacheable-lookup';
-import https from 'https';
+import * as https from 'https';
 
 export interface SeveraApiClientOptions {
   /** A client ID of the API credentials used for connection */
