@@ -3,7 +3,7 @@ import { AxiosRequestConfig } from 'axios';
 import { HttpsAgent } from 'agentkeepalive';
 import { SeveraApiClientConfig, SeveraApiClientOptions } from './interfaces';
 import { FileBuffer } from './file-buffer';
-import https from 'https';
+import * as https from 'https';
 import CacheableLookup from 'cacheable-lookup';
 import FormData from 'form-data';
 
