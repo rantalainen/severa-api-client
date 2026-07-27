@@ -9,6 +9,12 @@ export interface SeveraApiClientOptions {
   clientSecret: string;
   /** A scope for the API access */
   scope?: string[];
+  /** Rate limit replenish rate in requests per second, defaults to 8 (Severa's quota is 10 per second) */
+  replenishRate?: number;
+  /** Rate limit burst capacity, defaults to 8 */
+  burstCapacity?: number;
+  /** How many times a request is retried after a 429 response, defaults to 5. Set to 0 to disable retrying. */
+  maxRetriesOn429?: number;
 }
 
 export interface SeveraApiClientConfig extends ApiConfig<any> {

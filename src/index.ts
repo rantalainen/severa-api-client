@@ -1,6 +1,7 @@
 import { Api, ApiConfig } from './api';
-import { AxiosRequestConfig } from 'axios';
+import { AxiosRequestConfig, InternalAxiosRequestConfig } from 'axios';
 import { HttpsAgent } from 'agentkeepalive';
+import { RateLimiter } from './rate-limiter';
 import { SeveraApiClientConfig, SeveraApiClientOptions } from './interfaces';
 import { FileBuffer } from './file-buffer';
 import * as https from 'https';
@@ -26,6 +27,8 @@ export class SeveraApiClient {
   config: Omit<SeveraApiClientConfig, 'keepAliveAgent' | 'dnsCache'>;
   readonly api: SeveraApiClientInstance;
   private accessToken: string | undefined = undefined;
+  private rateLimiter: RateLimiter;
+  private maxRetriesOn429: number;
 
   constructor(options: SeveraApiClientOptions, config: SeveraApiClientConfig = {}) {
     // Set default config
@@ -64,6 +67,10 @@ export class SeveraApiClient {
     this.options = options;
     this.config = config;
 
+    // Severa does not return rate limit headers, so the limiter runs on fixed defaults
+    this.rateLimiter = new RateLimiter(options.replenishRate, options.burstCapacity);
+    this.maxRetriesOn429 = options.maxRetriesOn429 ?? 5;
+
     // Initialize Example Api Client Instance
     this.api = new SeveraApiClientInstance({
       ...this.config,
@@ -71,15 +78,67 @@ export class SeveraApiClient {
     });
     this.api.setSecurityData(this);
 
+    // Install rate limiter interceptor
+    this.installRateLimiter();
+
     // Install axios error handler
     this.installErrorHandler();
+  }
+
+  // Create a rate limiter interceptor that waits for tokens before allowing requests
+  private installRateLimiter() {
+    this.api.instance.interceptors.request.use(async (axiosRequestConfig: InternalAxiosRequestConfig) => {
+      // Wait for rate limiter to allow the request
+      await this.rateLimiter.waitUntilAvailable();
+      return axiosRequestConfig;
+    });
+  }
+
+  /**
+   * Resolves how long to wait before retrying a request that was rejected with 429.
+   * Uses the `Retry-After` header when the API provides one (seconds or HTTP date),
+   * otherwise falls back to exponential backoff capped at 30 seconds.
+   */
+  private resolveRetryDelay(error: any, retryCount: number): number {
+    const retryAfter = error.response?.headers?.['retry-after'];
+
+    if (retryAfter !== undefined) {
+      const retryAfterSeconds = Number(retryAfter);
+      if (!isNaN(retryAfterSeconds) && retryAfterSeconds > 0) {
+        return retryAfterSeconds * 1000;
+      }
+
+      const retryAfterDate = Date.parse(retryAfter);
+      if (!isNaN(retryAfterDate)) {
+        const waitMilliseconds = retryAfterDate - Date.now();
+        if (waitMilliseconds > 0) return waitMilliseconds;
+      }
+    }
+
+    return Math.min(1000 * Math.pow(2, retryCount), 30000);
   }
 
   private installErrorHandler() {
     this.api.instance.interceptors.response.use(
       (response) => response,
-      (error) => {
-        error.message = `HTTP error ${error.response.status} (${error.response.statusText}): ` + JSON.stringify(error.response.data);
+      async (error) => {
+        if (error.response?.status === 429 && error.config) {
+          const retryCount: number = error.config.__retryCount || 0;
+
+          // Drain the bucket so that the retry and any concurrent requests are spaced out
+          this.rateLimiter.backOff(this.resolveRetryDelay(error, retryCount));
+
+          if (retryCount < this.maxRetriesOn429) {
+            error.config.__retryCount = retryCount + 1;
+            // The rate limiter request interceptor holds the retry back until the backoff has passed
+            return this.api.instance.request(error.config);
+          }
+        }
+
+        if (error.response) {
+          error.message = `HTTP error ${error.response.status} (${error.response.statusText}): ` + JSON.stringify(error.response.data);
+        }
+
         throw error;
       }
     );
